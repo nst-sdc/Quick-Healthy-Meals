@@ -135,18 +135,6 @@ const RecipeForm = ({ onAddRecipe, darkMode }) => {
       <h2 className="form-title">Add New Recipe</h2>
 
       <form onSubmit={handleSubmit} className="form">
-        <div className="form-group">
-          <label htmlFor="recipeName">Recipe Name</label>
-          <input
-            type="text"
-            id="recipeName"
-            value={recipeName}
-            onChange={(e) => setRecipeName(e.target.value)}
-            placeholder="Enter recipe name..."
-            required
-            className="input"
-          />
-        </div>
 
         <div className="form-group">
           <label htmlFor="cookingTime">Cooking Time</label>
