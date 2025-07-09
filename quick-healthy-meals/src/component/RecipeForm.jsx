@@ -1,223 +1,140 @@
-import React, { useState } from 'react'
-import './RecipeForm.css'
+import React, { useState } from "react";
+import "./RecipeForm.css";
+import AIService from "../services/aiService";
 
 const RecipeForm = ({ onAddRecipe, darkMode }) => {
-  const [recipeName, setRecipeName] = useState('')
-  const [ingredients, setIngredients] = useState([])
-  const [newIngredient, setNewIngredient] = useState('')
-  const [cookingTime, setCookingTime] = useState('15')
-  const [isHealthy, setIsHealthy] = useState(true)
-  const [instructions, setInstructions] = useState('')
-  const [isGenerating, setIsGenerating] = useState(false)
+  const [recipeName, setRecipeName] = useState("");
+  const [ingredients, setIngredients] = useState([]);
+  const [newIngredient, setNewIngredient] = useState("");
+  const [cookingTime, setCookingTime] = useState("15");
+  const [isHealthy, setIsHealthy] = useState(true);
+  const [instructions, setInstructions] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const timeOptions = [
-    { value: '5', label: '5 minutes' },
-    { value: '10', label: '10 minutes' },
-    { value: '15', label: '15 minutes' },
-    { value: '20', label: '20 minutes' },
-    { value: '30', label: '30 minutes' },
-    { value: '45', label: '45 minutes' },
-    { value: '60', label: '1 hour' },
-    { value: '90', label: '1.5 hours' },
-    { value: '120', label: '2 hours' }
-  ]
+    { value: "5", label: "5 minutes" },
+    { value: "10", label: "10 minutes" },
+    { value: "15", label: "15 minutes" },
+    { value: "20", label: "20 minutes" },
+    { value: "30", label: "30 minutes" },
+    { value: "45", label: "45 minutes" },
+    { value: "60", label: "1 hour" },
+    { value: "90", label: "1.5 hours" },
+    { value: "120", label: "2 hours" },
+  ];
 
   const addIngredient = () => {
     if (newIngredient.trim()) {
-      setIngredients([...ingredients, { id: Date.now(), text: newIngredient.trim(), completed: false }])
-      setNewIngredient('')
+      setIngredients([
+        ...ingredients,
+        { id: Date.now(), text: newIngredient.trim(), completed: false },
+      ]);
+      setNewIngredient("");
     }
-  }
+  };
 
   const removeIngredient = (id) => {
-    setIngredients(ingredients.filter(ingredient => ingredient.id !== id))
-  }
+    setIngredients(ingredients.filter((ingredient) => ingredient.id !== id));
+  };
 
   const toggleIngredient = (id) => {
-    setIngredients(ingredients.map(ingredient => 
-      ingredient.id === id 
-        ? { ...ingredient, completed: !ingredient.completed }
-        : ingredient
-    ))
-  }
-
-  const generateRecipeWithAI = async () => {
-    const availableIngredients = ingredients.filter(ing => !ing.completed).map(ing => ing.text)
-    if (availableIngredients.length === 0) {
-      alert('Please add some ingredients first!')
-      return
-    }
-
-    setIsGenerating(true)
-
-    try {
-      console.log('Generating recipe with ingredients:', availableIngredients)
-      
-      // Using Google Gemini API with your API key
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.0-pro:generateContent?key=AIzaSyA75Kl7XwOkgUb8E2Cf6eLwbcxLJxtZs_k`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                {
-                  text: `Create a recipe using these ingredients: ${availableIngredients.join(', ')}. 
-                  Cooking time: ${cookingTime} minutes. 
-                  Health preference: ${isHealthy ? 'healthy' : 'indulgent'}. 
-                  
-                  Please provide a JSON response with the following structure:
-                  {
-                    "name": "Creative recipe name",
-                    "instructions": "Step-by-step cooking instructions",
-                    "additionalIngredients": "comma-separated list of additional ingredients needed",
-                    "tips": "Cooking tips and suggestions",
-                    "difficulty": "easy/medium/hard",
-                    "servings": "number of servings"
-                  }`
-                }
-              ]
-            }
-          ]
-        })
-      })
-
-      console.log('API Response status:', response.status)
-      
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.error('API Error response:', errorText)
-        throw new Error(`API Error: ${response.status} - ${errorText}`)
-      }
-
-      const data = await response.json()
-      console.log('API Response data:', data)
-
-      // Check if the response has the expected structure
-      if (!data.candidates || !data.candidates[0] || !data.candidates[0].content || !data.candidates[0].content.parts || !data.candidates[0].content.parts[0]) {
-        console.error('Unexpected API response structure:', data)
-        throw new Error('Unexpected API response format')
-      }
-
-      const aiText = data.candidates[0].content.parts[0].text
-      console.log('AI Response text:', aiText)
-
-      // Try to parse the JSON response
-      let aiResponse
-      try {
-        // Extract JSON from the response (AI might wrap it in markdown or add extra text)
-        const jsonMatch = aiText.match(/\{[\s\S]*\}/)
-        if (jsonMatch) {
-          aiResponse = JSON.parse(jsonMatch[0])
-        } else {
-          aiResponse = JSON.parse(aiText)
-        }
-      } catch (parseError) {
-        console.error('Failed to parse AI response as JSON:', parseError)
-        console.log('Raw AI response:', aiText)
-        
-        // Fallback: create a basic recipe from the text
-        aiResponse = {
-          name: `Recipe with ${availableIngredients.join(', ')}`,
-          instructions: aiText,
-          additionalIngredients: '',
-          tips: 'Recipe generated by AI',
-          difficulty: 'medium',
-          servings: 2
-        }
-      }
-
-      console.log('Parsed AI response:', aiResponse)
-
-      // Create a recipe object from AI response
-      const generatedRecipe = {
-        id: Date.now(),
-        name: aiResponse.name || `Recipe with ${availableIngredients.join(', ')}`,
-        ingredients: availableIngredients,
-        cookingTime: parseInt(cookingTime),
-        isHealthy: isHealthy,
-        instructions: aiResponse.instructions || aiText,
-        tips: aiResponse.tips || '',
-        difficulty: aiResponse.difficulty || 'medium',
-        servings: aiResponse.servings || 2,
-        isAIGenerated: true,
-        createdAt: new Date().toISOString()
-      }
-
-      // Add the generated recipe to the list
-      onAddRecipe(generatedRecipe)
-
-      // Show success message
-      alert(`Recipe generated successfully! 
-      
-Recipe: ${generatedRecipe.name}
-Difficulty: ${generatedRecipe.difficulty}
-Servings: ${generatedRecipe.servings}
-Tips: ${generatedRecipe.tips}
-
-The recipe has been added to your collection!`)
-
-    } catch (error) {
-      console.error('Error generating recipe:', error)
-      alert(`Failed to generate recipe: ${error.message}. Please check the console for more details.`)
-    } finally {
-      setIsGenerating(false)
-    }
-  }
+    setIngredients(
+      ingredients.map((ingredient) =>
+        ingredient.id === id
+          ? { ...ingredient, completed: !ingredient.completed }
+          : ingredient
+      )
+    );
+  };
 
   const handleSubmit = (e) => {
-    e.preventDefault()
+    e.preventDefault();
     if (recipeName.trim() && ingredients.length > 0) {
       const recipe = {
         name: recipeName,
-        ingredients: ingredients.filter(ing => !ing.completed), // Only add uncompleted ingredients
+        ingredients: ingredients.filter((ing) => !ing.completed), // Only add uncompleted ingredients
         cookingTime: parseInt(cookingTime),
         isHealthy,
         instructions: instructions.trim(),
-        completedIngredients: ingredients.filter(ing => ing.completed)
-      }
-      onAddRecipe(recipe)
-      
+        completedIngredients: ingredients.filter((ing) => ing.completed),
+      };
+      onAddRecipe(recipe);
+
       // Reset form
-      setRecipeName('')
-      setIngredients([])
-      setNewIngredient('')
-      setCookingTime('15')
-      setIsHealthy(true)
-      setInstructions('')
+      setRecipeName("");
+      setIngredients([]);
+      setNewIngredient("");
+      setCookingTime("15");
+      setIsHealthy(true);
+      setInstructions("");
     }
-  }
+  };
 
   const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      addIngredient()
+    if (e.key === "Enter") {
+      addIngredient();
     }
-  }
+  };
+
+  const generateAIRecipe = async () => {
+    if (ingredients.length === 0) {
+      alert("Please add at least one ingredient to generate an AI recipe!");
+      return;
+    }
+
+    setIsGenerating(true);
+    try {
+      // Get API key from environment variables (Vite uses import.meta.env)
+      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+
+      if (!apiKey) {
+        throw new Error(
+          "Gemini API key not found. Please check your .env file."
+        );
+      }
+
+      const aiService = new AIService(apiKey);
+      const ingredientTexts = ingredients.map((ing) => ing.text);
+      const aiRecipe = await aiService.generateRecipe(
+        ingredientTexts,
+        parseInt(cookingTime),
+        isHealthy
+      );
+
+      // Auto-fill the form with AI generated recipe
+      setRecipeName(aiRecipe.name || "AI Generated Recipe");
+      setInstructions(aiRecipe.instructions || "");
+
+      // Add additional ingredients if any
+      if (aiRecipe.additionalIngredients) {
+        const additionalIngs = aiRecipe.additionalIngredients
+          .split(",")
+          .map((ing) => ing.trim());
+        const newIngredients = additionalIngs.map((ing) => ({
+          id: Date.now() + Math.random(),
+          text: ing,
+          completed: false,
+        }));
+        setIngredients((prev) => [...prev, ...newIngredients]);
+      }
+
+      // Show tips if available
+      if (aiRecipe.tips) {
+        alert(`Recipe Tips: ${aiRecipe.tips}`);
+      }
+    } catch (error) {
+      console.error("AI Recipe generation failed:", error);
+      alert(`Failed to generate AI recipe: ${error.message}`);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   return (
-    <div className={`recipe-form ${darkMode ? 'dark' : 'light'}`}>
+    <div className={`recipe-form ${darkMode ? "dark" : "light"}`}>
       <h2 className="form-title">Add New Recipe</h2>
-      
-      <form onSubmit={handleSubmit} className="form">
-        <div className="ai-section">
-          <h3 className="ai-section-title">🤖 AI Recipe Generation</h3>
-          
-          <button
-            type="button"
-            onClick={generateRecipeWithAI}
-            disabled={isGenerating || ingredients.filter(ing => !ing.completed).length === 0}
-            className="ai-generate-btn"
-          >
-            {isGenerating ? '🤖 Generating Recipe...' : '🤖 Generate Recipe with AI'}
-          </button>
-          
-          <small className="help-text">
-            AI will create a recipe using your available ingredients, cooking time, and health preferences
-          </small>
-        </div>
 
+      <form onSubmit={handleSubmit} className="form">
         <div className="form-group">
           <label htmlFor="recipeName">Recipe Name</label>
           <input
@@ -239,7 +156,7 @@ The recipe has been added to your collection!`)
             onChange={(e) => setCookingTime(e.target.value)}
             className="select"
           >
-            {timeOptions.map(option => (
+            {timeOptions.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>
@@ -252,7 +169,7 @@ The recipe has been added to your collection!`)
           <div className="health-toggle">
             <button
               type="button"
-              className={`health-btn ${isHealthy ? 'active' : ''}`}
+              className={`health-btn ${isHealthy ? "active" : ""}`}
               onClick={() => setIsHealthy(true)}
             >
               <span className="health-icon">🥗</span>
@@ -260,7 +177,7 @@ The recipe has been added to your collection!`)
             </button>
             <button
               type="button"
-              className={`health-btn ${!isHealthy ? 'active' : ''}`}
+              className={`health-btn ${!isHealthy ? "active" : ""}`}
               onClick={() => setIsHealthy(false)}
             >
               <span className="health-icon">🍕</span>
@@ -289,19 +206,25 @@ The recipe has been added to your collection!`)
               +
             </button>
           </div>
-          
+
           {ingredients.length > 0 && (
             <div className="ingredients-list">
-              {ingredients.map(ingredient => (
+              {ingredients.map((ingredient) => (
                 <div key={ingredient.id} className="ingredient-item">
                   <button
                     type="button"
-                    className={`ingredient-checkbox ${ingredient.completed ? 'completed' : ''}`}
+                    className={`ingredient-checkbox ${
+                      ingredient.completed ? "completed" : ""
+                    }`}
                     onClick={() => toggleIngredient(ingredient.id)}
                   >
-                    {ingredient.completed ? '✓' : ''}
+                    {ingredient.completed ? "✓" : ""}
                   </button>
-                  <span className={`ingredient-text ${ingredient.completed ? 'completed' : ''}`}>
+                  <span
+                    className={`ingredient-text ${
+                      ingredient.completed ? "completed" : ""
+                    }`}
+                  >
                     {ingredient.text}
                   </span>
                   <button
@@ -329,16 +252,27 @@ The recipe has been added to your collection!`)
           />
         </div>
 
-        <button
-          type="submit"
-          className="submit-btn"
-          disabled={!recipeName.trim() || ingredients.length === 0}
-        >
-          Add Recipe
-        </button>
+        <div className="button-group">
+          <button
+            type="button"
+            onClick={generateAIRecipe}
+            className="ai-btn"
+            disabled={ingredients.length === 0 || isGenerating}
+          >
+            {isGenerating ? "🤖 Generating..." : "🤖 Generate AI Recipe"}
+          </button>
+
+          <button
+            type="submit"
+            className="submit-btn"
+            disabled={!recipeName.trim() || ingredients.length === 0}
+          >
+            Add Recipe
+          </button>
+        </div>
       </form>
     </div>
-  )
-}
+  );
+};
 
-export default RecipeForm 
+export default RecipeForm;

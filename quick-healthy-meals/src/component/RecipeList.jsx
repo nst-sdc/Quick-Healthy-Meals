@@ -31,12 +31,9 @@ const RecipeList = ({ recipes, onDeleteRecipe, darkMode }) => {
       <h2 className="list-title">Your Recipes</h2>
       <div className="recipes-grid">
         {recipes.map(recipe => (
-          <div key={recipe.id} className={`recipe-card ${recipe.isHealthy ? 'healthy' : 'indulgent'} ${recipe.isAIGenerated ? 'ai-generated' : ''}`}>
+          <div key={recipe.id} className={`recipe-card ${recipe.isHealthy ? 'healthy' : 'indulgent'}`}>
             <div className="recipe-header">
-              <h3 className="recipe-name">
-                {recipe.name}
-                {recipe.isAIGenerated && <span className="ai-badge">🤖 AI</span>}
-              </h3>
+              <h3 className="recipe-name">{recipe.name}</h3>
               <div className="recipe-meta">
                 <span className="time-badge">
                   ⏱️ {formatTime(recipe.cookingTime)}
@@ -44,16 +41,6 @@ const RecipeList = ({ recipes, onDeleteRecipe, darkMode }) => {
                 <span className={`health-badge ${recipe.isHealthy ? 'healthy' : 'indulgent'}`}>
                   {recipe.isHealthy ? '🥗 Healthy' : '🍕 Indulgent'}
                 </span>
-                {recipe.isAIGenerated && recipe.difficulty && (
-                  <span className={`difficulty-badge ${recipe.difficulty}`}>
-                    {recipe.difficulty}
-                  </span>
-                )}
-                {recipe.isAIGenerated && recipe.servings && (
-                  <span className="servings-badge">
-                    👥 {recipe.servings} servings
-                  </span>
-                )}
               </div>
             </div>
 
@@ -64,7 +51,7 @@ const RecipeList = ({ recipes, onDeleteRecipe, darkMode }) => {
                   {recipe.ingredients.map((ingredient, index) => (
                     <li key={index} className="ingredient-item">
                       <span className="ingredient-bullet">•</span>
-                      {ingredient}
+                      {ingredient.text}
                     </li>
                   ))}
                 </ul>
@@ -77,16 +64,9 @@ const RecipeList = ({ recipes, onDeleteRecipe, darkMode }) => {
                 </div>
               )}
 
-              {recipe.isAIGenerated && recipe.tips && (
-                <div className="tips-section">
-                  <h4>💡 Cooking Tips:</h4>
-                  <p className="tips-text">{recipe.tips}</p>
-                </div>
-              )}
-
               <div className="recipe-footer">
                 <span className="recipe-date">
-                  {recipe.isAIGenerated ? 'AI Generated' : `Added: ${new Date(recipe.createdAt).toLocaleDateString()}`}
+                  Added: {new Date(recipe.createdAt).toLocaleDateString()}
                 </span>
                 <button
                   onClick={() => onDeleteRecipe(recipe.id)}
